@@ -11,6 +11,8 @@ interface ToolbarProps {
   onSync: () => void;
   isSyncing: boolean;
   scale: number;
+  onToggleConnectMode: () => void;
+  isConnecting: boolean;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -22,6 +24,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onSync,
   isSyncing,
   scale,
+  onToggleConnectMode,
+  isConnecting,
 }) => {
   const handleAddNote = useCallback((index: number) => {
     onAddNote(NOTE_COLORS[index] as NoteColor);
@@ -64,12 +68,24 @@ const Toolbar: React.FC<ToolbarProps> = ({
       <div className="w-px bg-gray-200" />
 
       {/* PDF Export */}
+
       <button
         onClick={onExportPDF}
         className="px-3 py-1 hover:bg-gray-100 rounded transition-colors text-sm font-medium"
         title="Export as PDF"
       >
         📄 PDF
+      </button>
+
+      {/* Connection Mode */}
+      <button
+        onClick={onToggleConnectMode}
+        className={`px-3 py-1 rounded transition-colors text-sm font-medium ${
+          isConnecting ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100'
+        }`}
+        title="Click to enter connection mode, then click two notes to connect them"
+      >
+        ➜
       </button>
 
       {/* Sync */}

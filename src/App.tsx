@@ -27,6 +27,8 @@ const App: React.FC = () => {
   const [scale, setScale] = useState(1);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [linkingSourceId, setLinkingSourceId] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectingFromId, setConnectingFromId] = useState<string | null>(null);
 
   // Modals
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -145,6 +147,42 @@ const App: React.FC = () => {
     [notes]
   );
 
+  const handleToggleConnectMode = useCallback(() => {
+    setIsConnecting((prev) => !prev);
+    setConnectingFromId(null);
+  }, []);
+
+  // Handle arrow connection mode clicks
+  const handleNoteClickForConnection = useCallback(
+    (id: string) => {
+      if (connectingFromId === null) {
+        // First click: select source note
+        setConnectingFromId(id);
+      } else if (connectingFromId === id) {
+        // Click same note again: deselect
+        setConnectingFromId(null);
+      } else {
+        // Second click: create connection
+        setConnections((prev) => {
+          const exists = prev.some((c) => c.fromId === connectingFromId && c.toId === id);
+          if (!exists) {
+            return [
+              ...prev,
+              {
+                id: uuidv4(),
+                fromId: connectingFromId,
+                toId: id,
+              },
+            ];
+          }
+          return prev;
+        });
+        setConnectingFromId(null);
+      }
+    },
+    [connectingFromId]
+  );
+
   // Linking Logic
   const handleLinkStart = useCallback((id: string) => {
     setLinkingSourceId(id);
@@ -178,6 +216,18 @@ const App: React.FC = () => {
     setSelectedNoteId(null);
     setLinkingSourceId(null);
   }, []);
+
+  // Update Note component onClick handling
+  const handleNoteSelect = useCallback(
+    (id: string) => {
+      if (isConnecting) {
+        handleNoteClickForConnection(id);
+      } else {
+        handleSelectNote(id);
+      }
+    },
+    [isConnecting, handleNoteClickForConnection, handleSelectNote]
+  );
 
   const handleSync = useCallback(async () => {
     if (!settings.r2BucketName || !settings.r2AccessKeyId) {
@@ -380,7 +430,9 @@ User Request: ${prompt}
             isLinking={linkingSourceId !== null}
             onUpdate={handleUpdateNote}
             onDelete={handleDeleteNote}
-            onSelect={handleSelectNote}
+            onSelect={handleNoteSelect}
+            isConnecting={isConnecting}
+            isConnectingFrom={connectingFromId === note.id}
             onAIRequest={handleOpenAI}
             onLinkStart={handleLinkStart}
             onLinkEnd={handleLinkEnd}
@@ -397,6 +449,8 @@ User Request: ${prompt}
         onExportPDF={handleExportPDF}
         onSync={handleSync}
         isSyncing={isSyncing}
+          onToggleConnectMode={handleToggleConnectMode}
+          isConnecting={isConnecting}
         scale={scale}
       />
 

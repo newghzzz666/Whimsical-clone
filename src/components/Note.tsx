@@ -6,6 +6,8 @@ interface NoteProps {
   scale: number;
   isSelected: boolean;
   isLinking: boolean;
+  isConnecting?: boolean;
+  isConnectingFrom?: boolean;
   onUpdate: (id: string, updates: Partial<NoteType>) => void;
   onDelete: (id: string) => void;
   onSelect: (id: string) => void;
@@ -19,6 +21,8 @@ const Note: React.FC<NoteProps> = ({
   scale: _scale,
   isSelected,
   isLinking,
+  isConnecting,
+  isConnectingFrom,
   onUpdate,
   onDelete,
   onSelect,
@@ -50,17 +54,28 @@ const Note: React.FC<NoteProps> = ({
     });
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  // Handle dragging with document-level events
+  useEffect(() => {
     if (!isDragging) return;
 
-    const newX = e.clientX - dragStart.x;
-    const newY = e.clientY - dragStart.y;
-    onUpdate(note.id, { x: newX, y: newY });
-  };
+    const handleMove = (e: MouseEvent) => {
+      const newX = e.clientX - dragStart.x;
+      const newY = e.clientY - dragStart.y;
+      onUpdate(note.id, { x: newX, y: newY });
+    };
 
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
+    const handleEnd = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMove);
+    document.addEventListener('mouseup', handleEnd);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMove);
+      document.removeEventListener('mouseup', handleEnd);
+    };
+  }, [isDragging, dragStart, note.id, onUpdate]);
 
   const handleResizeStart = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -117,7 +132,7 @@ const Note: React.FC<NoteProps> = ({
       ref={noteRef}
       className={`absolute transition-all ${isDragging ? 'note-dragging' : ''} ${
         isSelected ? 'note-selected' : ''
-      }`}
+      } ${isConnectingFrom ? 'ring-4 ring-blue-300' : ''}`}
       style={{
         left: `${note.x}px`,
         top: `${note.y}px`,
@@ -130,9 +145,6 @@ const Note: React.FC<NoteProps> = ({
         cursor: isDragging ? 'grabbing' : 'grab',
       }}
       onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
     >
       {/* Toolbar */}
       <div className="absolute top-2 right-2 flex gap-1 note-actions opacity-0 hover:opacity-100 transition-opacity">
